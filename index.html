@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nitro Broadcast Studio</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --primary: #bb86fc;
+            --text-main: #e0e0e0;
+            --border: #333;
+            --accent: #03dac6;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Bar */
+        header {
+            height: 40px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            justify-content: space-between;
+        }
+
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebars */
+        .sidebar {
+            width: 250px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-right {
+            border-right: none;
+            border-left: 1px solid var(--border);
+            width: 300px;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid var(--border);
+            min-height: 0; /* Fix flex overflow */
+        }
+
+        .panel-header {
+            padding: 10px;
+            background: #252525;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* Center Preview */
+        .preview-area {
+            flex: 1;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            background: #000;
+        }
+
+        /* Controls */
+        .btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { background: #444; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary { background: var(--primary); color: black; font-weight: bold; }
+        .btn-primary:hover { background: #a370db; }
+
+        .btn-danger { background: #cf6679; color: black; font-weight: bold; }
+        .btn-danger:hover { background: #b55566; }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #444;
+            color: #aaa;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: #777;
+            color: white;
+        }
+
+        .source-item {
+            background: #2c2c2c;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-left-width 0.1s ease;
+            border-left: 0px solid var(--primary);
+        }
+        .source-item:hover { background: #383838; }
+        .source-item.active { border-left: 4px solid var(--primary); background: #333; }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            background: #121212;
+            border: 1px solid #333;
+            color: white;
+            padding: 5px;
+            margin-bottom: 5px;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        /* Modal for adding sources */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-content {
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        .source-option {
+            background: #333;
+            padding: 15px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .source-option:hover { background: var(--primary); color: black; transform: scale(1.02); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: bold; color: var(--primary);">NITRO STUDIO</div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <div id="resolution-display" style="font-size: 0.8rem; color: #888;">1920x1080 @ 60FPS</div>
+        <button class="btn" id="settings-btn">⚙️ Settings</button>
+    </div>
+</header>
+
+<div class="workspace">
+    <!-- Left Sidebar: Scenes & Sources -->
+    <div class="sidebar">
+        <div class="panel" style="flex: 1;">
+            <div class="panel-header">
+                SCENES
+                <button class="btn" id="add-scene-btn">+</button>
+            </div>
+            <div class="panel-content" id="scene-list">
+                <!-- Scenes will be injected here -->
+            </div>
+        </div>
+        <div class="panel" style="flex: 2;">
+            <div class="panel-header">
+                SOURCES
+                <button class="btn" id="add-source-btn">+</button>
+            </div>
+            <div class="panel-content" id="current-sources-list">
+                <!-- Active sources go here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Center: Preview -->
+    <div class="preview-area">
+        <!-- The main composition canvas -->
+        <canvas id="studio-canvas" width="1920" height="1080"></canvas>
+    </div>
+
+    <!-- Right Sidebar: Mixer, Stream, Chat -->
+    <div class="sidebar sidebar-right">
+        <div class="panel" style="flex: 1;">
+            <div class="panel-header">AUDIO MIXER</div>
+            <div class="panel-content" id="audio-mixer-content">
+                <!-- Audio bars placeholder -->
+                <div style="margin-bottom: 10px;">
+                    <label>Desktop Audio</label>
+                    <input type="range" style="width: 100%">
+                </div>
+                <div>
+                    <label>Mic/Aux</label>
+                    <input type="range" style="width: 100%">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" style="flex: 2;">
+            <div class="panel-header">STREAM CONTROLS</div>
+            <div class="panel-content">
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 0.8rem; color: #888;">RTMP Server</label>
+                    <input type="text" id="rtmp-url" placeholder="rtmp://a.rtmp.youtube.com/live2">
+                    <label style="font-size: 0.8rem; color: #888;">Stream Key</label>
+                    <input type="password" id="stream-key" placeholder="****-****-****-****">
+                </div>
+                <button id="start-stream-btn" class="btn btn-primary" style="width: 100%; padding: 10px;">START STREAMING</button>
+                <button class="btn" style="width: 100%; margin-top: 5px;">RECORD</button>
+            </div>
+        </div>
+
+        <div class="panel" style="flex: 2;">
+            <div class="panel-header">CHAT</div>
+            <div class="panel-content" id="chat-box" style="font-size: 0.9rem;">
+                <div style="color: #888; text-align: center; margin-top: 20px;">Connect account to see chat</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Source Modal -->
+<div id="source-modal" class="modal">
+    <div class="modal-content">
+        <h3>Add Source</h3>
+        <div class="source-grid">
+            <div class="source-option" onclick="addSource('display')">Display Capture</div>
+            <div class="source-option" onclick="addSource('window')">Window Capture</div>
+            <div class="source-option" onclick="addSource('camera')">Video Capture Device</div>
+            <div class="source-option" onclick="addSource('audio')">Audio Input Capture</div>
+            <div class="source-option" onclick="addSource('image')">Image</div>
+            <div class="source-option" onclick="addSource('text')">Text (GDI+)</div>
+            <div class="source-option" onclick="addSource('browser')">Browser</div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 15px;" onclick="closeModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- Source Selection Modal -->
+<div id="source-selector-modal" class="modal">
+    <div class="modal-content" style="width: 600px;">
+        <h3>Select Source</h3>
+        <div id="source-selector-list" class="source-grid" style="max-height: 400px; overflow-y: auto;">
+            <!-- Dynamic content -->
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 15px;" onclick="closeSourceSelector()">Cancel</button>
+    </div>
+</div>
+
+<!-- Audio Device Selection Modal -->
+<div id="audio-selector-modal" class="modal">
+    <div class="modal-content">
+        <h3>Select Audio Device</h3>
+        <select id="audio-device-select" style="margin-bottom: 15px; padding: 8px;"></select>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="confirmAudioSelection()">OK</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="closeAudioSelector()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal">
+    <div class="modal-content">
+        <h3>Settings</h3>
+
+        <label>Output Resolution</label>
+        <select id="settings-res">
+            <option value="1280x720">1280x720 (720p)</option>
+            <option value="1920x1080" selected>1920x1080 (1080p)</option>
+            <option value="2560x1440">2560x1440 (2K)</option>
+            <option value="3840x2160">3840x2160 (4K)</option>
+        </select>
+
+        <label>Frame Rate</label>
+        <select id="settings-fps">
+            <option value="30">30 FPS</option>
+            <option value="60" selected>60 FPS</option>
+        </select>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="applySettings()">Apply</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="closeSettings()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

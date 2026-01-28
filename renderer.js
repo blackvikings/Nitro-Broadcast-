@@ -80,6 +80,7 @@ function switchScene(id) {
     activeSceneId = id;
     renderSceneList();
     updateSourceListUI();
+    rebuildAudioMixer(); // Rebuild mixer for the new scene
 }
 
 function addScene() {
@@ -100,6 +101,7 @@ function deleteScene(id) {
     }
     renderSceneList();
     updateSourceListUI();
+    rebuildAudioMixer();
 }
 
 addSceneBtn.onclick = addScene;
@@ -130,9 +132,9 @@ window.closeAudioSelector = () => {
 window.addSource = async (type) => {
     closeModal();
     
-    if (type === 'display' || type === 'window') {
+    if (type === 'display' || type === 'window' || type === 'audio-output') {
         const availableSources = await window.electronAPI.getSources();
-        showSourceSelector(availableSources);
+        showSourceSelector(availableSources, type);
 
     } else if (type === 'camera') {
         try {
@@ -146,8 +148,14 @@ window.addSource = async (type) => {
                 name: 'Webcam',
                 element: video,
                 width: 480,
-                height: 360
+                height: 360,
+                stream: stream // Store stream to stop tracks later
             });
+            
+            if (stream.getAudioTracks().length > 0) {
+                addAudioMixerControl('Webcam', stream, Date.now()); // Use ID for tracking
+            }
+
         } catch (e) {
             console.error("Camera error", e);
         }
@@ -179,22 +187,31 @@ window.confirmAudioSelection = async () => {
             video: false
         });
         
+        const id = Date.now();
         addSourceToState({
+            id: id, // Pass ID explicitly
             type: 'audio',
             name: label,
             stream: stream
         });
         
-        addAudioMixerControl(label, stream);
+        addAudioMixerControl(label, stream, id);
         
     } catch (e) {
         console.error("Audio selection error", e);
     }
 };
 
-function addAudioMixerControl(name, stream) {
+function addAudioMixerControl(name, stream, sourceId) {
     const mixerContent = document.getElementById('audio-mixer-content');
+    
+    // Clear placeholder if it exists
+    if (mixerContent.innerText.includes('No audio sources active')) {
+        mixerContent.innerHTML = '';
+    }
+
     const div = document.createElement('div');
+    div.id = `mixer-control-${sourceId}`; // Assign ID to remove later
     div.style.marginBottom = '15px';
     div.innerHTML = `
         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -228,40 +245,41 @@ function addAudioMixerControl(name, stream) {
     const volLabel = div.querySelector('.volume-val');
 
     slider.oninput = () => {
-        // Logarithmic volume control
         const val = parseInt(slider.value);
         const gain = val === 0 ? 0 : Math.pow(val / 100, 2); 
         gainNode.gain.value = gain;
+        
+        if (val === 0) volLabel.innerText = '-∞ dB';
+        else if (val === 100) volLabel.innerText = '0 dB';
+        else {
+            const db = 20 * Math.log10(val / 100);
+            volLabel.innerText = `${db.toFixed(1)} dB`;
+        }
     };
 
-    // Meter Animation Loop
     function updateMeter() {
         if (!document.body.contains(div)) return; // Stop if removed
 
         analyser.getByteFrequencyData(dataArray);
         
-        // Calculate PEAK volume instead of average
         let max = 0;
         for(let i = 0; i < bufferLength; i++) {
             if (dataArray[i] > max) max = dataArray[i];
         }
         
-        // Scale 0-255 to 0-100%
         const percent = (max / 255) * 100;
-        
         meterFill.style.height = `${percent}%`;
         
-        // Color change based on level
-        if (percent > 85) meterFill.style.background = '#cf6679'; // Red/Clip
-        else if (percent > 60) meterFill.style.background = '#ffb74d'; // Yellow
-        else meterFill.style.background = '#03dac6'; // Green
+        if (percent > 85) meterFill.style.background = '#cf6679';
+        else if (percent > 60) meterFill.style.background = '#ffb74d';
+        else meterFill.style.background = '#03dac6';
 
         requestAnimationFrame(updateMeter);
     }
     updateMeter();
 }
 
-function showSourceSelector(sourceList) {
+function showSourceSelector(sourceList, type) {
     sourceSelectorList.innerHTML = '';
     if (sourceList.length === 0) {
         sourceSelectorList.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 20px;">No sources found.</div>';
@@ -286,13 +304,13 @@ function showSourceSelector(sourceList) {
 
         div.appendChild(img);
         div.appendChild(label);
-        div.onclick = () => selectSource(source);
+        div.onclick = () => selectSource(source, type);
         sourceSelectorList.appendChild(div);
     });
     sourceSelectorModal.classList.add('show');
 }
 
-async function selectSource(source) {
+async function selectSource(source, type) {
     closeSourceSelector();
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -310,23 +328,41 @@ async function selectSource(source) {
             }
         });
         
+        const id = Date.now();
+
+        if (type === 'audio-output') {
+            if (stream.getAudioTracks().length > 0) {
+                addSourceToState({
+                    id: id,
+                    type: 'audio',
+                    name: 'Desktop Audio',
+                    stream: stream
+                });
+                addAudioMixerControl('Desktop Audio', stream, id);
+            } else {
+                alert('Selected source does not have audio.');
+            }
+            return;
+        }
+
         const video = document.createElement('video');
         video.srcObject = stream;
         video.play();
         
         video.onloadedmetadata = () => {
             addSourceToState({
+                id: id,
                 type: 'video',
                 name: source.name,
                 element: video,
                 width: canvas.width,
-                height: canvas.height
+                height: canvas.height,
+                stream: stream
             });
         };
 
-        // If stream has audio track, add to mixer
         if (stream.getAudioTracks().length > 0) {
-            addAudioMixerControl(source.name, stream);
+            addAudioMixerControl(source.name, stream, id);
         }
 
     } catch (e) {
@@ -338,7 +374,8 @@ function addSourceToState(sourceConfig) {
     const activeScene = getActiveScene();
     if (!activeScene) return;
 
-    const id = Date.now();
+    // Use provided ID or generate new one
+    const id = sourceConfig.id || Date.now();
     const newSource = {
         id,
         x: 0,
@@ -370,11 +407,46 @@ function updateSourceListUI() {
 window.removeSource = (id) => {
     const activeScene = getActiveScene();
     if (activeScene) {
+        const sourceToRemove = activeScene.sources.find(s => s.id === id);
+        
+        // Stop all tracks (audio/video) to release hardware
+        if (sourceToRemove && sourceToRemove.stream) {
+            sourceToRemove.stream.getTracks().forEach(track => track.stop());
+        }
+
+        // Remove from state
         activeScene.sources = activeScene.sources.filter(s => s.id !== id);
+        
+        // Update UI
         updateSourceListUI();
-        // Note: Removing audio source from mixer UI is not implemented yet for simplicity
+        
+        // Remove from Audio Mixer
+        const mixerControl = document.getElementById(`mixer-control-${id}`);
+        if (mixerControl) {
+            mixerControl.remove();
+        }
+        
+        // Check if mixer is empty
+        const mixerContent = document.getElementById('audio-mixer-content');
+        if (mixerContent.children.length === 0) {
+            mixerContent.innerHTML = '<div style="color: #666; font-size: 0.8rem; text-align: center; padding-top: 20px;">No audio sources active</div>';
+        }
     }
 };
+
+function rebuildAudioMixer() {
+    const mixerContent = document.getElementById('audio-mixer-content');
+    mixerContent.innerHTML = '<div style="color: #666; font-size: 0.8rem; text-align: center; padding-top: 20px;">No audio sources active</div>';
+    
+    const activeScene = getActiveScene();
+    if (activeScene) {
+        activeScene.sources.forEach(source => {
+            if (source.stream && source.stream.getAudioTracks().length > 0) {
+                addAudioMixerControl(source.name, source.stream, source.id);
+            }
+        });
+    }
+}
 
 // Render Loop
 let lastTime = 0;

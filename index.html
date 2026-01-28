@@ -254,14 +254,9 @@
         <div class="panel" style="flex: 1;">
             <div class="panel-header">AUDIO MIXER</div>
             <div class="panel-content" id="audio-mixer-content">
-                <!-- Audio bars placeholder -->
-                <div style="margin-bottom: 10px;">
-                    <label>Desktop Audio</label>
-                    <input type="range" style="width: 100%">
-                </div>
-                <div>
-                    <label>Mic/Aux</label>
-                    <input type="range" style="width: 100%">
+                <!-- Audio controls will be injected here -->
+                <div style="color: #666; font-size: 0.8rem; text-align: center; padding-top: 20px;">
+                    No audio sources active
                 </div>
             </div>
         </div>
@@ -298,6 +293,7 @@
             <div class="source-option" onclick="addSource('window')">Window Capture</div>
             <div class="source-option" onclick="addSource('camera')">Video Capture Device</div>
             <div class="source-option" onclick="addSource('audio')">Audio Input Capture</div>
+            <div class="source-option" onclick="addSource('audio-output')">Audio Output Capture</div>
             <div class="source-option" onclick="addSource('image')">Image</div>
             <div class="source-option" onclick="addSource('text')">Text (GDI+)</div>
             <div class="source-option" onclick="addSource('browser')">Browser</div>

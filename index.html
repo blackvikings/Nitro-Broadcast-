@@ -4,12 +4,14 @@
     <title>Nitro Broadcast Studio</title>
     <style>
         :root {
+            /* Default Theme (Dark/Purple) */
             --bg-dark: #121212;
             --bg-panel: #1e1e1e;
             --primary: #bb86fc;
             --text-main: #e0e0e0;
             --border: #333;
             --accent: #03dac6;
+            --danger: #cf6679;
         }
 
         body {
@@ -25,59 +27,39 @@
 
         /* Top Bar */
         header {
-            height: 40px;
+            height: 50px;
             background: var(--bg-panel);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             padding: 0 15px;
             justify-content: space-between;
+            flex-shrink: 0;
+            gap: 20px;
         }
 
-        /* Main Workspace */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        /* Main Workspace (Middle Area) */
         .workspace {
             display: flex;
             flex: 1;
             overflow: hidden;
+            min-height: 0;
         }
 
-        /* Sidebars */
-        .sidebar {
+        /* Left Sidebar: Scenes & Sources */
+        .sidebar-left {
             width: 250px;
             background: var(--bg-panel);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-        }
-
-        .sidebar-right {
-            border-right: none;
-            border-left: 1px solid var(--border);
-            width: 300px;
-        }
-
-        .panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid var(--border);
-            min-height: 0; /* Fix flex overflow */
-        }
-
-        .panel-header {
-            padding: 10px;
-            background: #252525;
-            font-weight: bold;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
         }
 
         /* Center Preview */
@@ -87,15 +69,81 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
             position: relative;
+            gap: 10px;
+        }
+
+        /* Bottom Panel */
+        .bottom-panel {
+            height: 200px;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-shrink: 0;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            min-width: 0; /* Fix flex overflow */
+        }
+        .panel:last-child { border-right: none; }
+
+        .panel-header {
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.05);
+            font-weight: bold;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* Canvas Styles */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .canvas-label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
         }
 
         canvas {
             max-width: 100%;
             max-height: 100%;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
             background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .preview-canvas { border-color: var(--accent); }
+        .program-canvas { border-color: var(--danger); }
+
+        .transition-controls {
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
         }
 
         /* Controls */
@@ -103,20 +151,25 @@
             background: #333;
             color: white;
             border: none;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
         }
-        .btn:hover { background: #444; transform: translateY(-1px); }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
         .btn:active { transform: translateY(0); }
 
         .btn-primary { background: var(--primary); color: black; font-weight: bold; }
-        .btn-primary:hover { background: #a370db; }
 
-        .btn-danger { background: #cf6679; color: black; font-weight: bold; }
-        .btn-danger:hover { background: #b55566; }
+        .btn-danger { background: var(--danger); color: black; font-weight: bold; }
+
+        .btn-transition { background: var(--text-main); color: black; font-weight: bold; padding: 10px 0; justify-content: center; }
+        .btn-transition:hover { background: white; }
 
         .btn-secondary {
             background: transparent;
@@ -130,7 +183,7 @@
         }
 
         .source-item {
-            background: #2c2c2c;
+            background: rgba(255,255,255,0.05);
             padding: 8px;
             margin-bottom: 5px;
             border-radius: 4px;
@@ -141,22 +194,113 @@
             transition: background-color 0.2s ease, border-left-width 0.1s ease;
             border-left: 0px solid var(--primary);
         }
-        .source-item:hover { background: #383838; }
-        .source-item.active { border-left: 4px solid var(--primary); background: #333; }
+        .source-item:hover { background: rgba(255,255,255,0.1); }
+        .source-item.active { border-left: 4px solid var(--primary); background: rgba(255,255,255,0.15); }
 
-        input[type="text"], input[type="password"], select {
+        .destination-pill {
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+        .destination-pill:hover { background: rgba(255,255,255,0.1); }
+        .destination-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .destination-dot.live { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
+
+        input[type="text"], input[type="password"], select, textarea {
             width: 100%;
-            background: #121212;
-            border: 1px solid #333;
-            color: white;
-            padding: 5px;
-            margin-bottom: 5px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px;
+            margin-bottom: 8px;
             box-sizing: border-box;
             transition: border-color 0.2s ease;
+            font-family: inherit;
+            font-size: 0.9rem;
         }
-        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+        input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
             border-color: var(--primary);
             outline: none;
+        }
+
+        input[type="file"] { margin-bottom: 10px; }
+
+        /* Audio Mixer Knob Styles */
+        .mixer-channel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 70px;
+            background: rgba(255,255,255,0.03);
+            padding: 10px 5px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+        }
+        .mixer-channel:hover {
+            border-color: #444;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .knob-container {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            margin: 10px 0;
+            cursor: ns-resize; /* Up/Down resize cursor for dragging */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .knob {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #444;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05);
+            position: relative;
+            transform: rotate(-135deg); /* Start at 0 volume */
+            transition: transform 0.05s ease-out;
+            box-sizing: border-box; /* Ensures border is included in width/height */
+        }
+
+        .knob::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 1px;
+        }
+
+        .meter-container {
+            width: 6px;
+            height: 60px;
+            background: #111;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 5px;
+        }
+
+        .meter-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: var(--accent);
+            transition: height 0.05s linear;
         }
 
         /* Modal for adding sources */
@@ -171,24 +315,20 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        .modal.show {
-            display: flex;
-            opacity: 1;
-        }
+        .modal.show { display: flex; opacity: 1; }
         .modal-content {
             background: var(--bg-panel);
             padding: 20px;
             border-radius: 8px;
             width: 400px;
-            max-height: 80vh;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
             transform: scale(0.9);
             transition: transform 0.3s ease;
+            border: 1px solid var(--border);
         }
-        .modal.show .modal-content {
-            transform: scale(1);
-        }
+        .modal.show .modal-content { transform: scale(1); }
 
         .source-grid {
             display: grid;
@@ -199,7 +339,7 @@
             padding: 5px;
         }
         .source-option {
-            background: #333;
+            background: rgba(255,255,255,0.05);
             padding: 15px;
             text-align: center;
             border-radius: 4px;
@@ -208,34 +348,88 @@
         }
         .source-option:hover { background: var(--primary); color: black; transform: scale(1.02); }
 
+        .platform-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .platform-btn:hover { background: rgba(255,255,255,0.1); }
+        .platform-icon { width: 24px; height: 24px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #555; }
+
+        /* Destination List in Modal */
+        .destination-list-item {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: bold; color: var(--primary);">NITRO STUDIO</div>
+    <div style="font-weight: bold; color: var(--primary); font-size: 1.1rem;">NITRO STUDIO</div>
+
+    <!-- Stream Controls in Header -->
+    <div class="header-controls">
+        <div id="destinations-pill-container" style="display: flex; gap: 5px;">
+            <!-- Pills will be injected here -->
+            <div class="destination-pill" onclick="openDestModal()">
+                <span class="destination-dot"></span>
+                <span>Destinations</span>
+            </div>
+        </div>
+
+        <div style="width: 1px; height: 20px; background: #444; margin: 0 10px;"></div>
+
+        <button id="start-stream-btn" class="btn btn-primary">START STREAMING</button>
+        <button class="btn btn-secondary">RECORD</button>
+    </div>
+
+    <!-- Right Side Settings -->
     <div style="display: flex; gap: 10px; align-items: center;">
         <div id="resolution-display" style="font-size: 0.8rem; color: #888;">1920x1080 @ 60FPS</div>
         <button class="btn" id="settings-btn">⚙️ Settings</button>
     </div>
 </header>
 
+<!-- Middle Area: Scenes, Sources, Preview -->
 <div class="workspace">
     <!-- Left Sidebar: Scenes & Sources -->
-    <div class="sidebar">
+    <div class="sidebar-left">
         <div class="panel" style="flex: 1;">
             <div class="panel-header">
                 SCENES
-                <button class="btn" id="add-scene-btn">+</button>
+                <button class="btn" id="add-scene-btn" style="padding: 0 6px;">+</button>
             </div>
             <div class="panel-content" id="scene-list">
                 <!-- Scenes will be injected here -->
             </div>
         </div>
-        <div class="panel" style="flex: 2;">
+        <div class="panel" style="flex: 1;">
             <div class="panel-header">
                 SOURCES
-                <button class="btn" id="add-source-btn">+</button>
+                <button class="btn" id="add-source-btn" style="padding: 0 6px;">+</button>
             </div>
             <div class="panel-content" id="current-sources-list">
                 <!-- Active sources go here -->
@@ -243,43 +437,42 @@
         </div>
     </div>
 
-    <!-- Center: Preview -->
+    <!-- Center: Preview & Program -->
     <div class="preview-area">
-        <!-- The main composition canvas -->
-        <canvas id="studio-canvas" width="1920" height="1080"></canvas>
+        <div class="canvas-container">
+            <div class="canvas-label" style="color: var(--accent);">Preview</div>
+            <canvas id="preview-canvas" class="preview-canvas" width="1920" height="1080"></canvas>
+        </div>
+
+        <div class="transition-controls">
+            <button id="transition-btn" class="btn btn-transition">Cut</button>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-label" style="color: var(--danger);">Program (Live)</div>
+            <canvas id="program-canvas" class="program-canvas" width="1920" height="1080"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Panel: Mixer, Chat -->
+<div class="bottom-panel">
+    <!-- Center: Audio Mixer -->
+    <div class="panel" style="flex: 2;">
+        <div class="panel-header">AUDIO MIXER</div>
+        <div class="panel-content" id="audio-mixer-content" style="display: flex; gap: 15px; overflow-x: auto;">
+            <!-- Audio controls will be injected here (horizontal layout) -->
+            <div style="color: #666; font-size: 0.8rem; margin: auto;">
+                No audio sources active
+            </div>
+        </div>
     </div>
 
-    <!-- Right Sidebar: Mixer, Stream, Chat -->
-    <div class="sidebar sidebar-right">
-        <div class="panel" style="flex: 1;">
-            <div class="panel-header">AUDIO MIXER</div>
-            <div class="panel-content" id="audio-mixer-content">
-                <!-- Audio controls will be injected here -->
-                <div style="color: #666; font-size: 0.8rem; text-align: center; padding-top: 20px;">
-                    No audio sources active
-                </div>
-            </div>
-        </div>
-
-        <div class="panel" style="flex: 2;">
-            <div class="panel-header">STREAM CONTROLS</div>
-            <div class="panel-content">
-                <div style="margin-bottom: 15px;">
-                    <label style="font-size: 0.8rem; color: #888;">RTMP Server</label>
-                    <input type="text" id="rtmp-url" placeholder="rtmp://a.rtmp.youtube.com/live2">
-                    <label style="font-size: 0.8rem; color: #888;">Stream Key</label>
-                    <input type="password" id="stream-key" placeholder="****-****-****-****">
-                </div>
-                <button id="start-stream-btn" class="btn btn-primary" style="width: 100%; padding: 10px;">START STREAMING</button>
-                <button class="btn" style="width: 100%; margin-top: 5px;">RECORD</button>
-            </div>
-        </div>
-
-        <div class="panel" style="flex: 2;">
-            <div class="panel-header">CHAT</div>
-            <div class="panel-content" id="chat-box" style="font-size: 0.9rem;">
-                <div style="color: #888; text-align: center; margin-top: 20px;">Connect account to see chat</div>
-            </div>
+    <!-- Right: Chat -->
+    <div class="panel" style="flex: 1;">
+        <div class="panel-header">CHAT</div>
+        <div class="panel-content" id="chat-box" style="font-size: 0.9rem;">
+            <div style="color: #888; text-align: center; margin-top: 20px;">Connect account to see chat</div>
         </div>
     </div>
 </div>
@@ -325,17 +518,110 @@
     </div>
 </div>
 
+<!-- Add Destination Modal -->
+<div id="dest-modal" class="modal">
+    <div class="modal-content">
+        <h3>Manage Destinations</h3>
+
+        <!-- List of added destinations -->
+        <div id="destinations-list" style="margin-bottom: 15px; max-height: 150px; overflow-y: auto;">
+            <!-- Items injected here -->
+        </div>
+
+        <button class="btn btn-secondary" onclick="showDestPlatformSelect()" style="width: 100%; margin-bottom: 15px;">+ Add New Destination</button>
+
+        <div id="dest-platform-select" style="display: none;">
+            <div class="platform-btn" onclick="showDestForm('YouTube')">
+                <div class="platform-icon" style="background: #ff0000; color: white;">YT</div>
+                YouTube Live
+            </div>
+            <div class="platform-btn" onclick="showDestForm('Twitch')">
+                <div class="platform-icon" style="background: #9146ff; color: white;">Tw</div>
+                Twitch
+            </div>
+            <div class="platform-btn" onclick="showDestForm('Facebook')">
+                <div class="platform-icon" style="background: #1877f2; color: white;">FB</div>
+                Facebook Live
+            </div>
+            <div class="platform-btn" onclick="showDestForm('Custom')">
+                <div class="platform-icon" style="background: #888; color: white;">RTMP</div>
+                Custom RTMP
+            </div>
+        </div>
+
+        <div id="dest-form" style="display: none; overflow-y: auto;">
+            <h4 id="dest-form-title" style="margin-top: 0;">Setup YouTube</h4>
+
+            <!-- Login State -->
+            <div id="dest-login-area" style="text-align: center; padding: 20px; background: #252525; border-radius: 4px; margin-bottom: 10px;">
+                <p style="font-size: 0.9rem; color: #aaa;">Connect your account to manage streams.</p>
+                <button class="btn btn-primary" onclick="simulateLogin()">Connect Account</button>
+            </div>
+
+            <!-- Connected State (Metadata Form) -->
+            <div id="dest-metadata-area" style="display: none;">
+                <div class="user-profile">
+                    <div class="user-avatar"></div>
+                    <div>
+                        <div style="font-weight: bold; font-size: 0.9rem;">Demo User</div>
+                        <div style="font-size: 0.7rem; color: #888;">Connected</div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-left: auto; font-size: 0.7rem;" onclick="logoutDest()">Logout</button>
+                </div>
+
+                <label style="font-size: 0.8rem; color: #888;">Stream Title</label>
+                <input type="text" id="dest-title" placeholder="My Awesome Stream">
+
+                <label style="font-size: 0.8rem; color: #888;">Description</label>
+                <textarea id="dest-desc" rows="3" placeholder="Tell viewers about your stream..."></textarea>
+
+                <label style="font-size: 0.8rem; color: #888;">Thumbnail</label>
+                <input type="file" id="dest-thumb" accept="image/*">
+            </div>
+
+            <!-- Custom RTMP Fallback -->
+            <div id="dest-rtmp-area" style="display: none;">
+                <label style="font-size: 0.8rem; color: #888;">Server URL</label>
+                <input type="text" id="new-dest-url" placeholder="rtmp://...">
+                <label style="font-size: 0.8rem; color: #888;">Stream Key</label>
+                <input type="password" id="new-dest-key">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveDestination()">Add</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="resetDestModal()">Back</button>
+            </div>
+        </div>
+
+        <button class="btn btn-secondary" style="margin-top: 15px;" onclick="closeDestModal()">Close</button>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settings-modal" class="modal">
     <div class="modal-content">
         <h3>Settings</h3>
 
+        <label>Theme</label>
+        <select id="settings-theme">
+            <option value="dark">Dark (Default)</option>
+            <option value="light">Light</option>
+            <option value="blue">Midnight Blue</option>
+            <option value="high-contrast">High Contrast</option>
+        </select>
+
         <label>Output Resolution</label>
         <select id="settings-res">
-            <option value="1280x720">1280x720 (720p)</option>
-            <option value="1920x1080" selected>1920x1080 (1080p)</option>
-            <option value="2560x1440">2560x1440 (2K)</option>
-            <option value="3840x2160">3840x2160 (4K)</option>
+            <optgroup label="Landscape (16:9)">
+                <option value="1280x720">1280x720 (720p)</option>
+                <option value="1920x1080" selected>1920x1080 (1080p)</option>
+                <option value="2560x1440">2560x1440 (2K)</option>
+                <option value="3840x2160">3840x2160 (4K)</option>
+            </optgroup>
+            <optgroup label="Vertical (9:16)">
+                <option value="720x1280">720x1280 (Vertical HD)</option>
+                <option value="1080x1920">1080x1920 (Vertical FHD)</option>
+            </optgroup>
         </select>
 
         <label>Frame Rate</label>

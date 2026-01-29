@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nitro Studio - Login</title>
+    <style>
+        body {
+            background: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .login-card {
+            background: #1e1e1e;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 300px;
+            border: 1px solid #333;
+        }
+
+        h1 {
+            color: #bb86fc;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        p {
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn-youtube {
+            background: #ff0000;
+            color: white;
+            font-weight: bold;
+        }
+        .btn-youtube:hover { background: #cc0000; }
+
+        .btn-skip {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            font-size: 0.8rem;
+        }
+        .btn-skip:hover { border-color: #666; color: #ccc; }
+
+        .loader {
+            border: 3px solid #333;
+            border-top: 3px solid #bb86fc;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h1>NITRO STUDIO</h1>
+    <p>Sign in to start streaming</p>
+
+    <button class="btn btn-youtube" id="login-btn" onclick="startLogin()">
+        <span>Login with YouTube</span>
+    </button>
+
+    <div id="loading" style="display: none; margin-top: 15px;">
+        <div class="loader" style="display: block;"></div>
+        <div style="margin-top: 10px; font-size: 0.8rem; color: #888;">Waiting for browser...</div>
+    </div>
+
+    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px;">
+        <button class="btn btn-skip" onclick="skipLogin()">Skip / Offline Mode</button>
+    </div>
+</div>
+
+<script>
+    const { ipcRenderer, shell } = require('electron');
+
+    function startLogin() {
+        document.getElementById('login-btn').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+
+        // Open Laravel Auth URL
+        // Replace with your actual Laravel URL
+        const authUrl = 'http://localhost:8000/auth/youtube';
+
+        // Use the exposed API if available, or require electron if nodeIntegration is on (which it isn't for main window, but let's check preload)
+        // Since we are in a new window, we need to make sure preload is attached or we use ipcRenderer if nodeIntegration is enabled for this window.
+        // For security, we should use preload.
+        // But for this specific login file, let's assume we use the same preload.js
+
+        if (window.electronAPI) {
+            window.electronAPI.openExternal(authUrl);
+        }
+    }
+
+    function skipLogin() {
+        window.electronAPI.skipLogin();
+    }
+
+    // Listen for successful login via Deep Link
+    if (window.electronAPI) {
+        window.electronAPI.onDeepLink((url) => {
+            // If we receive a deep link here, it means main process forwarded it
+            // We can tell main process to switch to main window
+            console.log("Login received token");
+            window.electronAPI.loginSuccess(url);
+        });
+    }
+</script>
+</body>
+</html>
